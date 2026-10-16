@@ -2,11 +2,7 @@ const API_BASE = '/api';
 
 export async function compareSnapshots({ masterOld, transactionsOld, masterNew, transactionsNew, partyName, period }) {
   const formData = new FormData();
-  // The latest master stands in for the original unless the original is given (only asked for when ledgers
-  // of the filed vouchers are missing from the latest master)
-  if (masterOld) {
-    formData.append('master_old', masterOld);
-  }
+  formData.append('master_old', masterOld);
   formData.append('transactions_old', transactionsOld);
   formData.append('master_new', masterNew);
   formData.append('transactions_new', transactionsNew);

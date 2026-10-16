@@ -80,7 +80,7 @@ function FileDrop({ id, label, hint, file, onChange }) {
   );
 }
 
-function SnapshotCard({ step, title, description, prefix, masterLabel, master, setMaster, transactions, setTransactions, timeline, setTimeline }) {
+function SnapshotCard({ step, title, description, prefix, master, setMaster, transactions, setTransactions, timeline, setTimeline }) {
   return (
     <section className="card">
       <div className="card-head">
@@ -90,44 +90,15 @@ function SnapshotCard({ step, title, description, prefix, masterLabel, master, s
           <p className="card-desc">{description}</p>
         </div>
       </div>
-      {setMaster && (
-        <FileDrop id={`master-${prefix}`} label={masterLabel || 'Master JSON'} hint="master file" file={master} onChange={setMaster} />
-      )}
+      <FileDrop id={`master-${prefix}`} label="Master JSON" hint="master file" file={master} onChange={setMaster} />
       <FileDrop id={`tx-${prefix}`} label="Transaction JSON" hint="transactions file" file={transactions} onChange={setTransactions} />
       <div className="field">
         <label className="field-label" htmlFor={`timeline-${prefix}-from`}>
-          Data period <span className="optional">Optional</span>
+          Data period <span className="optional">optional</span>
         </label>
         <DateRangeInput idPrefix={`timeline-${prefix}`} value={timeline} onChange={setTimeline} />
       </div>
     </section>
-  );
-}
-
-// Ledgers of the filed vouchers that the latest master no longer has (renamed or deleted after filing). Their
-// details are only in the original master, so it is asked for here and the report regenerated with it.
-function MissingMasterLedgers({ names, masterOld, setMasterOld, onRegenerate, regenerating }) {
-  if (!names.length) return null;
-  const shown = names.slice(0, 10);
-  return (
-    <div className="unresolved-container">
-      <div className="section-title">Ledgers Missing From Latest Master</div>
-      <div className="unresolved-item">
-        <p className="unresolved-help">
-          {names.length} {names.length === 1 ? 'ledger' : 'ledgers'} used in the original vouchers{' '}
-          {names.length === 1 ? 'is' : 'are'} not in the latest master, probably renamed or deleted after filing.
-          Upload the original master and regenerate for full accuracy.
-        </p>
-        <div className="unresolved-names">
-          {shown.join(', ')}
-          {names.length > shown.length && ` and ${names.length - shown.length} more`}
-        </div>
-        <FileDrop id="master-old" label="Original Master JSON" hint="original master file" file={masterOld} onChange={setMasterOld} />
-        <button type="button" className="btn btn-small" disabled={!masterOld || regenerating} onClick={onRegenerate}>
-          {regenerating ? 'Regenerating…' : 'Regenerate with original master'}
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -157,9 +128,8 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [tab, setTab] = useState('compare');
 
-  // The original master is not part of the form: it is only asked for when the result reports missing ledgers
-  const filesChosen = [transactionsOld, masterNew, transactionsNew].filter(Boolean).length;
-  const isFormComplete = filesChosen === 3;
+  const filesChosen = [masterOld, transactionsOld, masterNew, transactionsNew].filter(Boolean).length;
+  const isFormComplete = filesChosen === 4;
 
   const handleCompare = async (e) => {
     if (e) e.preventDefault();
@@ -237,6 +207,8 @@ export default function App() {
                 title="Original / Filed Data"
                 description="The data as it was when the return was filed"
                 prefix="old"
+                master={masterOld}
+                setMaster={setMasterOld}
                 transactions={transactionsOld}
                 setTransactions={setTransactionsOld}
                 timeline={timelineOld}
@@ -247,7 +219,6 @@ export default function App() {
                 title="Updated / Current Data"
                 description="The data as it is in the books now"
                 prefix="new"
-                masterLabel="Latest Master JSON (used for both)"
                 master={masterNew}
                 setMaster={setMasterNew}
                 transactions={transactionsNew}
@@ -281,10 +252,10 @@ export default function App() {
             <div className="action-bar">
               <div className="progress">
                 <div className="progress-track">
-                  <div className="progress-fill" style={{ width: `${(filesChosen / 3) * 100}%` }} />
+                  <div className="progress-fill" style={{ width: `${(filesChosen / 4) * 100}%` }} />
                 </div>
                 <span className="progress-text">
-                  {isFormComplete ? 'All 3 files ready' : `${filesChosen} of 3 files chosen`}
+                  {isFormComplete ? 'All 4 files ready' : `${filesChosen} of 4 files chosen`}
                 </span>
               </div>
               <button type="submit" className="btn btn-primary" id="compare-btn" disabled={!isFormComplete || loading}>
@@ -377,14 +348,6 @@ export default function App() {
                   </p>
                 )}
               </div>
-
-              <MissingMasterLedgers
-                names={result.missing_master_ledgers || []}
-                masterOld={masterOld}
-                setMasterOld={setMasterOld}
-                onRegenerate={() => handleCompare()}
-                regenerating={loading}
-              />
 
               <UnresolvedSections
                 items={result.unresolved_sections || []}
