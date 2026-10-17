@@ -177,6 +177,10 @@ export default function App() {
         transactionsNew,
         partyName,
         period,
+        // The Excel report's period is the Updated / Current data period; a reversed range is not sent
+        ...(timelineNew.from && timelineNew.to && timelineNew.from > timelineNew.to
+          ? {}
+          : { periodFrom: timelineNew.from, periodTo: timelineNew.to }),
       });
       setResult(data);
     } catch (err) {
@@ -231,35 +235,9 @@ export default function App() {
         {/* Kept mounted while History is open, so the chosen files survive switching tabs */}
         <div hidden={tab !== 'compare'}>
           <form onSubmit={handleCompare}>
-            <div className="snapshot-grid">
-              <SnapshotCard
-                step="1"
-                title="Original / Filed Data"
-                description="The data as it was when the return was filed"
-                prefix="old"
-                transactions={transactionsOld}
-                setTransactions={setTransactionsOld}
-                timeline={timelineOld}
-                setTimeline={setTimelineOld}
-              />
-              <SnapshotCard
-                step="2"
-                title="Updated / Current Data"
-                description="The data as it is in the books now"
-                prefix="new"
-                masterLabel="Latest Master JSON (used for both)"
-                master={masterNew}
-                setMaster={setMasterNew}
-                transactions={transactionsNew}
-                setTransactions={setTransactionsNew}
-                timeline={timelineNew}
-                setTimeline={setTimelineNew}
-              />
-            </div>
-
             <section className="card">
               <div className="card-head">
-                <span className="step">3</span>
+                <span className="step">1</span>
                 <div>
                   <h2 className="card-title">Report Details</h2>
                   <p className="card-desc">Optional. Shown at the top of the Excel report.</p>
@@ -277,6 +255,32 @@ export default function App() {
                 />
               </div>
             </section>
+
+            <div className="snapshot-grid">
+              <SnapshotCard
+                step="2"
+                title="Original / Filed Data"
+                description="The data as it was when the return was filed"
+                prefix="old"
+                transactions={transactionsOld}
+                setTransactions={setTransactionsOld}
+                timeline={timelineOld}
+                setTimeline={setTimelineOld}
+              />
+              <SnapshotCard
+                step="3"
+                title="Updated / Current Data"
+                description="The data as it is in the books now"
+                prefix="new"
+                masterLabel="Latest Master JSON (used for both)"
+                master={masterNew}
+                setMaster={setMasterNew}
+                transactions={transactionsNew}
+                setTransactions={setTransactionsNew}
+                timeline={timelineNew}
+                setTimeline={setTimelineNew}
+              />
+            </div>
 
             <div className="action-bar">
               <div className="progress">

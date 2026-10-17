@@ -1,6 +1,6 @@
 const API_BASE = '/api';
 
-export async function compareSnapshots({ masterOld, transactionsOld, masterNew, transactionsNew, partyName, period }) {
+export async function compareSnapshots({ masterOld, transactionsOld, masterNew, transactionsNew, partyName, period, periodFrom, periodTo }) {
   const formData = new FormData();
   // The latest master stands in for the original unless the original is given (only asked for when ledgers
   // of the filed vouchers are missing from the latest master)
@@ -15,6 +15,13 @@ export async function compareSnapshots({ masterOld, transactionsOld, masterNew, 
   }
   if (period && period.trim()) {
     formData.append('period', period.trim());
+  }
+  // Report period (YYYY-MM-DD); an end left blank is taken from the vouchers by the engine
+  if (periodFrom) {
+    formData.append('period_from', periodFrom);
+  }
+  if (periodTo) {
+    formData.append('period_to', periodTo);
   }
 
   const response = await fetch(`${API_BASE}/compare`, {

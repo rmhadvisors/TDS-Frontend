@@ -20,6 +20,8 @@ export default function HistoryPanel({ active }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [selected, setSelected] = useState(() => new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const load = async (term = search) => {
     setLoading(true);
@@ -27,6 +29,7 @@ export default function HistoryPanel({ active }) {
     try {
       const data = await getHistory(term);
       setReports(data.reports);
+      setSelected(new Set());
       setStorage(data.storage);
     } catch (err) {
       setError(err.message);
@@ -51,11 +54,57 @@ It will be removed from storage and cannot be recovered.`)) return;
     try {
       await deleteReport(r.report_id);
       setReports((list) => list.filter((x) => x.report_id !== r.report_id));
+      setSelected((s) => {
+        const next = new Set(s);
+        next.delete(r.report_id);
+        return next;
+      });
     } catch (err) {
       setError(err.message);
     } finally {
       setDeleting(null);
     }
+  };
+
+  const toggleSelected = (id) => {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allSelected = reports.length > 0 && reports.every((r) => selected.has(r.report_id));
+
+  const toggleAll = () => {
+    setSelected(allSelected ? new Set() : new Set(reports.map((r) => r.report_id)));
+  };
+
+  // Deletes the selected reports one by one; the ones that fail stay listed and selected so they can be retried
+  const handleDeleteSelected = async () => {
+    const ids = reports.map((r) => r.report_id).filter((id) => selected.has(id));
+    if (!ids.length) return;
+    if (!window.confirm(`Delete ${ids.length} selected report${ids.length === 1 ? '' : 's'} for everyone?
+
+${ids.length === 1 ? 'It' : 'They'} will be removed from storage and cannot be recovered.`)) return;
+    setBulkDeleting(true);
+    setError(null);
+    const failed = [];
+    for (const id of ids) {
+      try {
+        await deleteReport(id);
+      } catch (err) {
+        failed.push(id);
+      }
+    }
+    const removed = new Set(ids.filter((id) => !failed.includes(id)));
+    setReports((list) => list.filter((x) => !removed.has(x.report_id)));
+    setSelected(new Set(failed));
+    if (failed.length) {
+      setError(`${failed.length} of ${ids.length} reports could not be deleted. They are still selected; try again.`);
+    }
+    setBulkDeleting(false);
   };
 
   const handleSearch = (e) => {
@@ -85,6 +134,28 @@ It will be removed from storage and cannot be recovered.`)) return;
         </div>
       )}
 
+      {reports.length > 0 && (
+        <div className="history-bulk">
+          <label className="history-check">
+            <input type="checkbox" checked={allSelected} onChange={toggleAll} disabled={bulkDeleting} />
+            Select all
+          </label>
+          {selected.size > 0 && (
+            <>
+              <span className="history-meta">{selected.size} selected</span>
+              <button
+                type="button"
+                className="btn btn-small btn-delete"
+                disabled={bulkDeleting}
+                onClick={handleDeleteSelected}
+              >
+                {bulkDeleting ? 'Deleting…' : `Delete selected (${selected.size})`}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {(!error || reports.length > 0) && (
         <ul className="history-list">
           {reports.length === 0 && (
@@ -94,6 +165,14 @@ It will be removed from storage and cannot be recovered.`)) return;
           )}
           {reports.map((r) => (
             <li className="history-item" key={r.report_id}>
+              <input
+                type="checkbox"
+                className="history-select"
+                aria-label={`Select report for ${r.party_name || 'All Parties'}`}
+                checked={selected.has(r.report_id)}
+                onChange={() => toggleSelected(r.report_id)}
+                disabled={bulkDeleting}
+              />
               <div className="history-info">
                 <div className="history-party">{r.party_name || 'All Parties'}</div>
                 <div className="history-meta">
@@ -108,7 +187,7 @@ It will be removed from storage and cannot be recovered.`)) return;
                   type="button"
                   className="btn btn-small btn-delete"
                   aria-label={`Delete report for ${r.party_name || 'All Parties'}`}
-                  disabled={deleting === r.report_id}
+                  disabled={deleting === r.report_id || bulkDeleting}
                   onClick={() => handleDelete(r)}
                 >
                   {deleting === r.report_id ? 'Deleting…' : 'Delete'}
