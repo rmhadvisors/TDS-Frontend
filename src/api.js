@@ -1,15 +1,28 @@
 const API_BASE = '/api';
 
-export async function compareSnapshots({ masterOld, transactionsOld, masterNew, transactionsNew, partyName, period, periodFrom, periodTo }) {
+// Tally JSON shrinks 20-70x with gzip (a 551 MB export uploads as ~30 MB); the backend unpacks it. The file is
+// streamed through the compressor in chunks, so only the compressed copy is held in memory. Browsers without
+// CompressionStream upload the file as it is.
+async function gzipFile(file) {
+  if (typeof CompressionStream === 'undefined') return file;
+  const compressed = await new Response(file.stream().pipeThrough(new CompressionStream('gzip'))).blob();
+  return new File([compressed], `${file.name}.gz`, { type: 'application/gzip' });
+}
+
+export async function compareSnapshots({ masterOld, transactionsOld, masterNew, transactionsNew, partyName, period, periodFrom, periodTo, onStage }) {
+  onStage?.('compressing');
+  const [mOld, tOld, mNew, tNew] = await Promise.all(
+    [masterOld, transactionsOld, masterNew, transactionsNew].map((f) => (f ? gzipFile(f) : null)),
+  );
   const formData = new FormData();
   // The latest master stands in for the original unless the original is given (only asked for when ledgers
   // of the filed vouchers are missing from the latest master)
-  if (masterOld) {
-    formData.append('master_old', masterOld);
+  if (mOld) {
+    formData.append('master_old', mOld);
   }
-  formData.append('transactions_old', transactionsOld);
-  formData.append('master_new', masterNew);
-  formData.append('transactions_new', transactionsNew);
+  formData.append('transactions_old', tOld);
+  formData.append('master_new', mNew);
+  formData.append('transactions_new', tNew);
   if (partyName && partyName.trim()) {
     formData.append('party_name', partyName.trim());
   }
@@ -24,6 +37,7 @@ export async function compareSnapshots({ masterOld, transactionsOld, masterNew, 
     formData.append('period_to', periodTo);
   }
 
+  onStage?.('uploading');
   const response = await fetch(`${API_BASE}/compare`, {
     method: 'POST',
     body: formData,

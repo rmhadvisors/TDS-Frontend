@@ -153,6 +153,7 @@ export default function App() {
   const [timelineNew, setTimelineNew] = useState({ from: '', to: '' });
 
   const [loading, setLoading] = useState(false);
+  const [stage, setStage] = useState(null); // 'compressing' | 'uploading' while a comparison runs
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const [tab, setTab] = useState('compare');
@@ -181,6 +182,7 @@ export default function App() {
         ...(timelineNew.from && timelineNew.to && timelineNew.from > timelineNew.to
           ? {}
           : { periodFrom: timelineNew.from, periodTo: timelineNew.to }),
+        onStage: setStage,
       });
       setResult(data);
     } catch (err) {
@@ -190,6 +192,7 @@ export default function App() {
       });
     } finally {
       setLoading(false);
+      setStage(null);
     }
   };
 
@@ -295,7 +298,7 @@ export default function App() {
                 {loading ? (
                   <>
                     <span className="spinner"></span>
-                    Comparing…
+                    {stage === 'compressing' ? 'Compressing files…' : 'Uploading & comparing…'}
                   </>
                 ) : (
                   'Compare & Generate Report'
