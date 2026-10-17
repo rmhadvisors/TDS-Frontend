@@ -1,4 +1,6 @@
-const API_BASE = '/api';
+// Backend address: VITE_API_BASE (e.g. https://api.example.com) when the frontend is hosted apart from the backend,
+// as on Vercel; unset, requests go to /api on the same site (the Vite dev proxy locally).
+const API_BASE = `${(import.meta.env.VITE_API_BASE || '').replace(/\/+$/, '')}/api`;
 
 // Tally JSON shrinks 20-70x with gzip (a 551 MB export uploads as ~30 MB); the backend unpacks it. The file is
 // streamed through the compressor in chunks, so only the compressed copy is held in memory. Browsers without
